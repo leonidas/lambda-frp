@@ -53,9 +53,9 @@ data KeyEvent = KeyEvent
     , keyModifiers :: Modifiers
     }
 
-nanoDelta :: TimeSpec -> TimeSpec -> Int
-nanoDelta (TimeSpec s ns) (TimeSpec s' ns')
-    = (s' - s) * 1000000 + ns' - ns
+nanoDelta :: TimeSpec -> TimeSpec -> Integer
+nanoDelta (TimeSpec s n) (TimeSpec s' n')
+    = fromIntegral (s' - s) * 1000000000 + fromIntegral (n' - n)
 
 glInteract :: Coroutine [KeyEvent] viewmodel -> (viewmodel -> IO ()) -> IO ()
 glInteract logic renderFunc = do
@@ -80,7 +80,7 @@ glInteract logic renderFunc = do
             writeIORef coroutine co'
             writeIORef viewModel vm
 
-    let tickLength = 1000000 `div` 120  -- 120 ticks per second in nanoseconds
+    let tickLength = 1000000000 `div` 240  -- 240 ticks per second in nanoseconds
     displayCallback $= do
         prev    <- readIORef prevTime
         current <- getTime Monotonic
@@ -89,9 +89,10 @@ glInteract logic renderFunc = do
         let delta  = nanoDelta prev current
             accum' = accum + delta
 
-            exhaust act t
-                | t < 0    = return t
-                | otherwise = act >> exhaust act (t - tickLength)
+            exhaust act = go where
+                go t
+                    | t < 0     = return t
+                    | otherwise = act >> go (t - tickLength)
 
         writeIORef prevTime current
         exhaust tick accum' >>= writeIORef timeAccum
@@ -99,5 +100,6 @@ glInteract logic renderFunc = do
         clear [ColorBuffer]
         readIORef viewModel >>= renderFunc
         swapBuffers
+        postRedisplay Nothing
 
     mainLoop
