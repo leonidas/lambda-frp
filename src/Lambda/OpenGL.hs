@@ -9,8 +9,7 @@ import Control.Concurrent.MVar
 
 import System.Clock
 
-import Graphics.UI.GLUT
-import Graphics.Rendering.OpenGL
+import Graphics.UI.GLUT hiding (accum)
 
 import Control.Coroutine
 
@@ -56,7 +55,7 @@ data KeyEvent = KeyEvent
 
 nanoDelta :: TimeSpec -> TimeSpec -> Int
 nanoDelta (TimeSpec s ns) (TimeSpec s' ns')
-    = (s' - s) * 1000000 + ns' - ns'
+    = (s' - s) * 1000000 + ns' - ns
 
 glInteract :: Coroutine [KeyEvent] viewmodel -> (viewmodel -> IO ()) -> IO ()
 glInteract logic renderFunc = do
@@ -71,7 +70,7 @@ glInteract logic renderFunc = do
     coroutine <- newIORef logic
     viewModel <- newIORef undefined
 
-    keyboardMouseCallback $= Just (\k ks mods pos ->
+    keyboardMouseCallback $= Just (\k ks mods _ ->
         modifyMVar_ keyEvents $ return . (KeyEvent k ks mods :))
 
     let tick = do
