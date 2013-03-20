@@ -1,8 +1,11 @@
+{-# LANGUAGE Arrows #-}
 
 module Logic (logic) where
 
+import Prelude hiding (id, (.))
+
+import Control.Category
 import Control.Arrow
-import Control.Applicative
 
 import Control.Coroutine
 import Control.Coroutine.FRP
@@ -12,14 +15,27 @@ import Lambda.Vector
 import ViewModel
 
 logic :: Coroutine [KeyEvent] ViewModel
-logic = (ballX &&& ballY) >>^ \(x, y) -> ViewModel
-    { ball = Ball
-        { ballPos    = Vec2 x y
-        , ballRadius = 25
+logic = proc _ -> do
+
+    ballX  <- integrate 100 -< xSpeed
+    rec ballY  <- switchCurrent yFunc 100 -< (ySpeed, bounce)
+        ySpeed <- switchCurrent ySpeedFunc 0 -< (gravity, bounce)
+        bounce <- watch (> floorY) <<< delay 1 -< ballY
+
+    returnA -< ViewModel
+        { ball = Ball
+            { ballPos    = Vec2 ballX ballY
+            , ballRadius = 25
+            }
         }
-    }
+
     where
-        ballX = ballSpeed >>> integrate 100
-        ballSpeed = pure 0.3
-        ballY = gravity >>> integrate 0 >>> integrate 100
-        gravity = pure 0.01
+        ySpeedFunc old = integrate (old * (-0.8))
+        yFunc old      = integrate (newY) where
+            newY
+                | old > 500 = 500 - (old - 500)
+                | otherwise = old
+
+        xSpeed  = 0.3
+        gravity = 0.01
+        floorY  = 500
