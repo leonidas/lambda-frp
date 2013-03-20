@@ -16,6 +16,7 @@ cabal-version:       >=1.8
 
 executable lambda-frp
   main-is: Main.hs
+  ghc-options: -O2 -Wall
 
   other-modules: Lambda.OpenGL
     , Lambda.Vector
