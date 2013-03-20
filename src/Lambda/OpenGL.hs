@@ -73,14 +73,19 @@ glInteract logic renderFunc = do
     keyboardMouseCallback $= Just (\k ks mods _ ->
         modifyMVar_ keyEvents $ return . (KeyEvent k ks mods :))
 
-    let tick = do
+    let tickLength = 1000000000 `div` 240  -- 240 ticks per second in nanoseconds
+        tick = do
             co  <- readIORef coroutine
             evs <- swapMVar keyEvents []
             let (vm, co') = runC co evs
             writeIORef coroutine co'
             writeIORef viewModel vm
 
-    let tickLength = 1000000000 `div` 240  -- 240 ticks per second in nanoseconds
+        exhaust = go where
+            go t
+                | t < 0     = return t
+                | otherwise = tick >> go (t - tickLength)
+
     displayCallback $= do
         prev    <- readIORef prevTime
         current <- getTime Monotonic
@@ -89,13 +94,8 @@ glInteract logic renderFunc = do
         let delta  = nanoDelta prev current
             accum' = accum + delta
 
-            exhaust act = go where
-                go t
-                    | t < 0     = return t
-                    | otherwise = act >> go (t - tickLength)
-
         writeIORef prevTime current
-        exhaust tick accum' >>= writeIORef timeAccum
+        exhaust accum' >>= writeIORef timeAccum
 
         clear [ColorBuffer]
         readIORef viewModel >>= renderFunc
