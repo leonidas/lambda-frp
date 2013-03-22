@@ -3,7 +3,7 @@ module Lambda.Vector where
 
 import Graphics.Rendering.OpenGL (GLfloat)
 
-data Vec2 = Vec2 !GLfloat !GLfloat deriving (Eq, Show)
+data Vec2 = Vec2 { vx :: !GLfloat, vy :: !GLfloat } deriving (Eq, Show)
 
 instance Num Vec2 where
     Vec2 x y + Vec2 i j = Vec2 (x+i) (y+j)

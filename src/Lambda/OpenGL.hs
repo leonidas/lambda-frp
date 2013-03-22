@@ -19,7 +19,7 @@ initializeWindow = do
     initialWindowSize  $= Size 800 600
     initialDisplayMode $= [DoubleBuffered]
     _ <- getArgsAndInitialize
-    createWindow "Lambda"
+    _ <- createWindow "Lambda"
     windowSize $= Size 800 600
 
 -- | Set up the initial OpenGL parameters

@@ -22,14 +22,33 @@ renderTurret (Turret{..}) = do
     drawRect (tPos - Vec2 0 18) (Vec2 6 10)
 
 renderBullet :: Bullet -> IO ()
-renderBullet = undefined
+renderBullet (Bullet{..}) = do
+    setColor 0.9 0.9 0.2
+    drawRect bPos (Vec2 5 15)
 
 renderInvader :: Invader -> IO ()
+renderInvader (Invader iPos Death) = do
+    setColor 0.9 0.9 0.9
+    forM_ [0..7] $ \s ->
+        let rad = 2 * pi * s / 8
+            rx  = cos rad
+            ry  = -sin rad
+        in drawRotated (iPos + Vec2 (rx*8) (ry*8)) rad 6 3
+
 renderInvader (Invader{..}) = do
     setColor 0.9 0.9 0.9
     drawRect iPos (Vec2 24 24)
-    setColor 0.9 0.1 0.1
-    drawRotated (iPos - Vec2 16 0) (pi/3) 160 160
+    drawRect (iPos + Vec2 6 (-14)) (Vec2 4 4)
+    drawRect (iPos + Vec2 (-6) (-14)) (Vec2 4 4)
+
+    case iFrame of
+        Walk1 -> do
+            drawRotated (iPos + Vec2 10 10) (-pi/2+pi/6) 8 6
+            drawRotated (iPos + Vec2 (-10) 10) (-pi/2-pi/6) 8 6
+        Walk2 -> do
+            drawRotated (iPos + Vec2 10 10) (-pi/2) 8 6
+            drawRotated (iPos + Vec2 (-10) 10) (-pi/2) 8 6
+
 
     setColor 0 0 0
     drawRect (iPos + Vec2 6 0) (Vec2 4 8)
@@ -41,35 +60,18 @@ setColor r g b = currentColor $= Color4 r g b 1.0
 drawRotated :: Vec2 -> GLfloat -> GLfloat -> GLfloat -> IO ()
 drawRotated (Vec2 x y) rot len w = do
     let w' = w / 2
-        r' = rot + pi
+        r' = rot + pi/2
         x' = x + (cos rot * len)
         y' = y - (sin rot * len)
         dx = cos r' * w'
         dy = -sin r' * w'
 
-    print (x,y)
-    print (dx, dy)
-    print (x', y')
-
-    -- drawCircle (Vec2 x y + Vec2 (cos r' * w') (-sin r' * w')) 3
-    -- drawCircle (Vec2 x' y') 3
-
-    {-
-    renderPrimitive Quads $ mapM_ (vertex . uncurry Vertex2)
+    renderPrimitive TriangleFan $ mapM_ (vertex . uncurry Vertex2)
         [ (x - dx, y - dy)
-        , (x' + dx, y' + dy)
         , (x + dx, y + dy)
+        , (x' + dx, y' + dy)
         , (x' - dx, y' - dy)
         ]
-    -}
-
-    renderPrimitive Quads $ mapM_ (vertex . uncurry Vertex2)
-        [ (fromIntegral $ truncate (x - dx), y - dy)
-        , (x + 10, y + 10)
-        , (x' + 10, y' + 10)
-        , (x' - 10, y' - 10)
-        ]
-
 
 drawRect :: Vec2 -> Vec2 -> IO ()
 drawRect (Vec2 x y) (Vec2 w h) = do
