@@ -1,14 +1,34 @@
 
-module ViewModel (ViewModel(..), Ball(..)) where
+module ViewModel
+    ( ViewModel(..)
+    , Turret(..)
+    , Bullet(..)
+    , Invader(..)
+    , AnimationFrame(..)
+    ) where
 
-import Graphics.Rendering.OpenGL (GLfloat)
 import Lambda.Vector
 
 data ViewModel = ViewModel
-    { ball :: Ball
+    { turret   :: Turret
+    , bullets  :: [Bullet]
+    , invaders :: [Invader]
     }
 
-data Ball = Ball
-    { ballPos    :: Vec2
-    , ballRadius :: GLfloat
+data Turret = Turret
+    { tPos :: Vec2
     }
+
+data Bullet = Bullet
+    { bPos :: Vec2
+    }
+
+data Invader = Invader
+    { iPos   :: Vec2
+    , iFrame :: AnimationFrame
+    }
+
+data AnimationFrame
+    = Walk1
+    | Walk2
+    | Death
