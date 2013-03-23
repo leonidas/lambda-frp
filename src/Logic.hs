@@ -7,7 +7,7 @@ import Prelude hiding (id, (.))
 
 import Control.Applicative
 import Control.Arrow
-import Control.Category
+-- import Control.Category
 
 import Control.Coroutine
 import Control.Coroutine.FRP
@@ -69,7 +69,17 @@ turretC = proc keyEvents -> do
         y = 550
 
 invaderC :: Invader -> Coroutine () (Maybe Invader)
-invaderC = pure . Just
+invaderC (Invader{..}) = proc () -> do
+    frameEv <- every 240 () -< ()
+    frame   <- stepE iFrame <<< mapC (cycleC frames) -< frameEv
+
+    returnA -< Just $ Invader iPos frame
+    where
+        frames = case iFrame of
+            Walk1 -> [Walk2, Walk1]
+            Walk2 -> [Walk1, Walk2]
+            _     -> [Death]
+
 
 logic :: Coroutine [KeyEvent] ViewModel
 logic = proc keyEvents -> do
@@ -81,7 +91,7 @@ logic = proc keyEvents -> do
     where
         initialInvaders = map invaderC $ zipWith Invader invaderPos invaderFrame
         invaderPos   = Vec2 <$> [64,128..10*64] <*> [64,128..4*64]
-        invaderFrame = cycle [Walk1, Walk2]
+        invaderFrame = cycle [Walk1, Walk2, Walk1]
 
 
 keyPressed :: Key -> Coroutine [KeyEvent] Bool
