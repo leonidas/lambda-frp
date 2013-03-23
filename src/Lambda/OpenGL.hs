@@ -94,7 +94,7 @@ glInteract logic renderFunc = do
         current <- getPOSIXTime
         accum   <- readIORef timeAccum
 
-        let delta  = prev - current
+        let delta  = current - prev
             accum' = accum + delta
 
         writeIORef prevTime current
