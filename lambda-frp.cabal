@@ -28,7 +28,7 @@ executable lambda-frp
 
   build-depends:       base
     , containers
-    , clock  == 0.3.*
+    , time
     , GLUT   == 2.4.*
     , OpenGL == 2.8.*
 
