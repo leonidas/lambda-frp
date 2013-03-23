@@ -7,7 +7,8 @@ module Lambda.OpenGL
 import Data.IORef
 import Control.Concurrent.MVar
 
-import System.Clock
+-- import System.Clock
+import Data.Time.Clock.POSIX
 
 import Graphics.UI.GLUT hiding (accum)
 
@@ -19,7 +20,7 @@ initializeWindow = do
     initialWindowSize  $= Size 800 600
     initialDisplayMode $= [DoubleBuffered]
     _ <- getArgsAndInitialize
-    _ <- createWindow "Lambda"
+    createWindow "Lambda"
     windowSize $= Size 800 600
 
 -- | Set up the initial OpenGL parameters
@@ -53,9 +54,11 @@ data KeyEvent = KeyEvent
     , keyModifiers :: Modifiers
     }
 
+{-
 nanoDelta :: TimeSpec -> TimeSpec -> Integer
 nanoDelta (TimeSpec s n) (TimeSpec s' n')
     = fromIntegral (s' - s) * 1000000000 + fromIntegral (n' - n)
+-}
 
 glInteract :: Coroutine [KeyEvent] viewmodel -> (viewmodel -> IO ()) -> IO ()
 glInteract logic renderFunc = do
@@ -64,7 +67,7 @@ glInteract logic renderFunc = do
     initializeOpenGL
 
     keyEvents <- newMVar []
-    prevTime  <- getTime Monotonic >>= newIORef
+    prevTime  <- getPOSIXTime >>= newIORef
     timeAccum <- newIORef 0
 
     coroutine <- newIORef logic
@@ -73,10 +76,10 @@ glInteract logic renderFunc = do
     keyboardMouseCallback $= Just (\k ks mods _ ->
         modifyMVar_ keyEvents $ return . (KeyEvent k ks mods :))
 
-    let tickLength = 1000000000 `div` 240  -- 240 ticks per second in nanoseconds
+    let tickLength = 1.0 / 240  -- 240 ticks per second
         tick = do
             co  <- readIORef coroutine
-            evs <- swapMVar keyEvents []
+            evs <- fmap reverse $ swapMVar keyEvents []
             let (vm, co') = runC co evs
             writeIORef coroutine co'
             writeIORef viewModel vm
@@ -88,10 +91,10 @@ glInteract logic renderFunc = do
 
     displayCallback $= do
         prev    <- readIORef prevTime
-        current <- getTime Monotonic
+        current <- getPOSIXTime
         accum   <- readIORef timeAccum
 
-        let delta  = nanoDelta prev current
+        let delta  = current - prev
             accum' = accum + delta
 
         writeIORef prevTime current
