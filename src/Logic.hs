@@ -7,7 +7,7 @@ import Prelude hiding (id, (.))
 
 import Control.Applicative
 import Control.Arrow
--- import Control.Category
+import Control.Category
 
 import Control.Coroutine
 import Control.Coroutine.FRP
@@ -68,16 +68,20 @@ turretC = proc keyEvents -> do
     where
         y = 550
 
+invaderC :: Invader -> Coroutine () (Maybe Invader)
+invaderC = pure . Just
+
 logic :: Coroutine [KeyEvent] ViewModel
 logic = proc keyEvents -> do
     (turret, newBullet)  <- turretC       -< keyEvents
+    invaders             <- collection initialInvaders -< ((), [])
     bullets              <- collection [] -< (invaders, map bulletC newBullet)
 
     returnA -< ViewModel turret bullets invaders
     where
-        invaders = zipWith Invader invaderPos invaderFrame
+        initialInvaders = map invaderC $ zipWith Invader invaderPos invaderFrame
         invaderPos   = Vec2 <$> [64,128..10*64] <*> [64,128..4*64]
-        invaderFrame = cycle [Walk1, Walk2, Death]
+        invaderFrame = cycle [Walk1, Walk2]
 
 
 keyPressed :: Key -> Coroutine [KeyEvent] Bool
