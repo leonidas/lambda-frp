@@ -16,16 +16,20 @@ cabal-version:       >=1.8
 
 executable lambda-frp
   main-is: Main.hs
+  ghc-options: -O2 -Wall
 
   other-modules: Lambda.OpenGL
     , Lambda.Vector
+    , Control.Coroutine
+    , Control.Coroutine.FRP
+    , Control.Coroutine.FRP.Collections
     , Logic
     , Rendering
 
   build-depends:       base
+    , containers
     , clock  == 0.3.*
     , GLUT   == 2.4.*
     , OpenGL == 2.8.*
-    , coroutine-frp ==0.2.*
 
   hs-source-dirs:      src
