@@ -19,6 +19,12 @@ import Lambda.OpenGL (KeyEvent(..))
 import Lambda.Vector
 import ViewModel
 
+throttle :: Int -> Coroutine (Event a) (Event a)
+throttle minTicks = proc evs -> do
+    rec ticksSinceLast <- restartWhen (integrate 0) <<< delay (1, [])  -< (1, evs')
+        let evs' = if ticksSinceLast > minTicks then take 1 evs else []
+    returnA -< evs'
+
 collides :: Bullet -> Invader -> Bool
 collides (Bullet{..}) (Invader{..}) = dx < 29 && dy < 39
     where
@@ -42,7 +48,7 @@ turretC = proc keyEvents -> do
                 | keyRight && x' < 770 = 1
                 | otherwise            = 0
 
-        x' <- delay 1 -< x
+        x' <- delay 400 -< x
         x <- integrate 400 -< xspeed
 
     let pos = Vec2 x y
@@ -50,7 +56,7 @@ turretC = proc keyEvents -> do
             | keyFire   = [bulletC $ pos + Vec2 0 (-20)]
             | otherwise = []
 
-    returnA -< (Turret pos, newBullet)
+    returnA <<< second (throttle 140) -< (Turret pos, newBullet)
     where
         y = 550
 
