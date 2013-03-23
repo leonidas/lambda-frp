@@ -79,7 +79,7 @@ glInteract logic renderFunc = do
     let tickLength = 1.0 / 240  -- 240 ticks per second
         tick = do
             co  <- readIORef coroutine
-            evs <- swapMVar keyEvents []
+            evs <- fmap reverse $ swapMVar keyEvents []
             let (vm, co') = runC co evs
             writeIORef coroutine co'
             writeIORef viewModel vm
