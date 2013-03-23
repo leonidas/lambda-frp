@@ -28,15 +28,21 @@ throttle minTicks = proc evs -> do
 collides :: Bullet -> Invader -> Bool
 collides (Bullet{..}) (Invader{..}) = dx < 29 && dy < 39
     where
-        dx = abs $ vx bPos - vx iPos
+        dx = abs $ vx bPos - vx iPos
         dy = abs $ vy bPos - vy iPos
 
-bulletC :: Vec2 -> Coroutine () (Maybe Bullet)
-bulletC (Vec2 x y) = proc () -> do
-    y' <- integrate y -< -1
-    returnA -< if y' < 0 then Nothing else Just $ Bullet (Vec2 x y')
+bulletC :: Bullet -> Coroutine [Invader] (Maybe Bullet)
+bulletC (Bullet{..}) = proc invaders -> do
+    y' <- integrate (vy bPos) -< -1
 
-turretC :: Coroutine [KeyEvent] (Turret, Event (Item () Bullet))
+    let bullet = Bullet (Vec2 (vx bPos) y')
+        doesCollide = any (collides bullet) invaders
+        b
+            | doesCollide || y' < 0 = Nothing
+            | otherwise   = Just bullet
+    returnA -< b
+
+turretC :: Coroutine [KeyEvent] (Turret, Event Bullet)
 turretC = proc keyEvents -> do
     -- Controls
     keyLeft  <- keyPressed (SpecialKey KeyLeft)  -< keyEvents
@@ -53,7 +59,7 @@ turretC = proc keyEvents -> do
 
     let pos = Vec2 x y
         newBullet
-            | keyFire   = [bulletC $ pos + Vec2 0 (-20)]
+            | keyFire   = [Bullet $ pos + Vec2 0 (-20)]
             | otherwise = []
 
     returnA <<< second (throttle 140) -< (Turret pos, newBullet)
@@ -63,7 +69,7 @@ turretC = proc keyEvents -> do
 logic :: Coroutine [KeyEvent] ViewModel
 logic = proc keyEvents -> do
     (turret, newBullet)  <- turretC       -< keyEvents
-    bullets              <- collection [] -< ((), newBullet)
+    bullets              <- collection [] -< (invaders, map bulletC newBullet)
 
     returnA -< ViewModel turret bullets invaders
     where
