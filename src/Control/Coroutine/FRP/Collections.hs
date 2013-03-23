@@ -30,8 +30,8 @@ collection = Coroutine . step where
         runConts = foldr prune [] . map (\c -> runC c i)
 
     prune x a = case x of
-        (Nothing, _) -> a
-        (Just x,  c) -> (x,c):a
+        (Nothing, _)  -> a
+        (Just x',  c) -> (x',c):a
 
 receivers   :: [Receiver i e a]
             -> Coroutine (i, (Event (Receiver i e a), TEvent e)) [Tagged a]
