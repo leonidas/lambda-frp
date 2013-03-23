@@ -31,18 +31,18 @@ collides (Bullet{..}) (Invader{..}) = dx < 19 && dy < 29
         dx = abs $ vx bPos - vx iPos
         dy = abs $ vy bPos - vy iPos
 
-bulletC :: Bullet -> Coroutine [Invader] (Maybe Bullet)
+bulletC :: Bullet -> Coroutine [Tagged Invader] (Maybe Bullet, TEvent ())
 bulletC (Bullet{..}) = proc invaders -> do
     y' <- integrate (vy bPos) -< -1
 
     let bullet = Bullet (Vec2 (vx bPos) y')
-        doesCollide = any (collides bullet) $ filter isNotDead invaders
+        doesCollide = any (collides bullet) $ filter isNotDead $ untag invaders
         isNotDead (Invader _ Death) = False
         isNotDead _                 = True
         b
             | doesCollide || y' < 0 = Nothing
             | otherwise   = Just bullet
-    returnA -< b
+    returnA -< (b, [])
 
 turretC :: Coroutine [KeyEvent] (Turret, Event Bullet)
 turretC = proc keyEvents -> do
@@ -68,8 +68,8 @@ turretC = proc keyEvents -> do
     where
         y = 550
 
-invaderC :: Invader -> Coroutine () (Maybe Invader)
-invaderC (Invader{..}) = proc () -> do
+invaderC :: Invader -> Coroutine ((), Event ()) (Maybe Invader)
+invaderC (Invader{..}) = proc ((), evs) -> do
     frameEv <- every 240 () -< ()
     frame   <- stepE iFrame <<< mapC (cycleC frames) -< frameEv
 
@@ -84,10 +84,10 @@ invaderC (Invader{..}) = proc () -> do
 logic :: Coroutine [KeyEvent] ViewModel
 logic = proc keyEvents -> do
     (turret, newBullet)  <- turretC       -< keyEvents
-    invaders             <- collection initialInvaders -< ((), [])
-    bullets              <- collection [] -< (invaders, map bulletC newBullet)
+    invaders             <- receivers initialInvaders -< ((), ([], []))
+    (bullets, _)         <- senders [] -< (invaders, map bulletC newBullet)
 
-    returnA -< ViewModel turret bullets invaders
+    returnA -< ViewModel turret bullets (untag invaders)
     where
         initialInvaders = map invaderC $ zipWith Invader invaderPos invaderFrame
         invaderPos   = Vec2 <$> [64,128..10*64] <*> [64,128..4*64]
