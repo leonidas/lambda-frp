@@ -47,7 +47,6 @@ logic = proc keyEvents -> do
         ySwitch currentYSpeed = integrate (-0.8 * currentYSpeed)
 
         keyPressed :: Key -> Coroutine [KeyEvent] Bool
-        keyPressed k = scanE handleKeyEvent False where
-            handleKeyEvent old (KeyEvent{..})
-                | key == k  = keyState == Down
-                | otherwise = old
+        keyPressed k = filterE isInteresting >>> mapE isKeyDown >>> stepE False where
+            isInteresting (KeyEvent{..}) = key == k
+            isKeyDown (KeyEvent{..})     = keyState == Down
