@@ -7,7 +7,7 @@ import Prelude hiding (id, (.))
 
 import Control.Applicative
 import Control.Arrow
--- import Control.Category
+import Control.Category
 
 import Control.Coroutine
 import Control.Coroutine.FRP
@@ -19,9 +19,13 @@ import Lambda.OpenGL (KeyEvent(..))
 import Lambda.Vector
 import ViewModel
 
+import Debug.Trace
+
+data Collision = Collision
+
 throttle :: Int -> Coroutine (Event a) (Event a)
 throttle minTicks = proc evs -> do
-    rec ticksSinceLast <- restartWhen (integrate 0) <<< delay (1, [])  -< (1, evs')
+    rec ticksSinceLast <- restartWhen (integrate 0) -< (1, evs')
         let evs' = if ticksSinceLast > minTicks then take 1 evs else []
     returnA -< evs'
 
@@ -31,18 +35,22 @@ collides (Bullet{..}) (Invader{..}) = dx < 19 && dy < 29
         dx = abs $ vx bPos - vx iPos
         dy = abs $ vy bPos - vy iPos
 
-bulletC :: Bullet -> Coroutine [Tagged Invader] (Maybe Bullet, TEvent ())
-bulletC (Bullet{..}) = proc invaders -> do
+bulletC :: Bullet -> Coroutine [Tagged Invader] (Maybe Bullet, TEvent Collision)
+bulletC (Bullet{..}) = trace "newBullet" $ proc invaders -> do
     y' <- integrate (vy bPos) -< -1
 
     let bullet = Bullet (Vec2 (vx bPos) y')
-        doesCollide = any (collides bullet) $ filter isNotDead $ untag invaders
+        collisions
+            = map (\(recvId, _) -> (recvId, Collision))
+            $ filter (collides bullet . snd)
+            $ filter (isNotDead . snd) invaders
+        doesCollide = not . null $ collisions
         isNotDead (Invader _ Death) = False
         isNotDead _                 = True
         b
             | doesCollide || y' < 0 = Nothing
             | otherwise   = Just bullet
-    returnA -< (b, [])
+    returnA -< (b, collisions)
 
 turretC :: Coroutine [KeyEvent] (Turret, Event Bullet)
 turretC = proc keyEvents -> do
@@ -68,13 +76,14 @@ turretC = proc keyEvents -> do
     where
         y = 550
 
-invaderC :: Invader -> Coroutine ((), Event ()) (Maybe Invader)
+invaderC :: Invader -> Coroutine ((), Event Collision) (Maybe Invader)
 invaderC (Invader{..}) = proc ((), evs) -> do
     frameEv <- every 240 () -< ()
-    frame   <- stepE iFrame <<< mapC (cycleC frames) -< frameEv
+    frame   <- switchWith (const $ pure Death) frameCycle -< (frameEv, evs)
 
     returnA -< Just $ Invader iPos frame
     where
+        frameCycle = stepE iFrame <<< mapC (cycleC frames)
         frames = case iFrame of
             Walk1 -> [Walk2, Walk1]
             Walk2 -> [Walk1, Walk2]
@@ -83,9 +92,9 @@ invaderC (Invader{..}) = proc ((), evs) -> do
 
 logic :: Coroutine [KeyEvent] ViewModel
 logic = proc keyEvents -> do
-    (turret, newBullet)  <- turretC       -< keyEvents
-    invaders             <- receivers initialInvaders -< ((), ([], []))
-    (bullets, _)         <- senders [] -< (invaders, map bulletC newBullet)
+    (turret, newBullet)   <- turretC       -< keyEvents
+    rec invaders              <- receivers initialInvaders -< ((), ([], collisions))
+        (bullets, collisions) <- second (delay []) <<< senders [] -< (invaders, map bulletC newBullet)
 
     returnA -< ViewModel turret bullets (untag invaders)
     where
