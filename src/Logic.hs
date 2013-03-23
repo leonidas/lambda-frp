@@ -12,6 +12,8 @@ import Control.Category
 import Control.Coroutine
 import Control.Coroutine.FRP
 
+import Graphics.UI.GLUT
+
 import Lambda.OpenGL (KeyEvent(..))
 import Lambda.Vector
 import ViewModel
@@ -23,7 +25,12 @@ collides (Bullet{..}) (Invader{..}) = dx < 29 && dy < 39
         dy = abs $ vy bPos - vy iPos
 
 logic :: Coroutine [KeyEvent] ViewModel
-logic = proc _ -> do
+logic = proc keyEvents -> do
+
+    -- Controls
+    keyLeft  <- keyPressed (SpecialKey KeyLeft)  -< keyEvents
+    keyRight <- keyPressed (SpecialKey KeyRight) -< keyEvents
+    keyFire  <- keyPressed (Char ' ') -< keyEvents
 
     returnA -< ViewModel
         { turret   = Turret { tPos = Vec2 400 550 }
@@ -34,3 +41,8 @@ logic = proc _ -> do
     where
         invaderPos   = Vec2 <$> [64,128..10*64] <*> [64,128..4*64]
         invaderFrame = cycle [Walk1, Walk2, Death]
+
+        keyPressed :: Key -> Coroutine [KeyEvent] Bool
+        keyPressed k = filterE isInteresting >>> mapE isKeyDown >>> stepE False where
+            isInteresting (KeyEvent{..}) = key == k
+            isKeyDown (KeyEvent{..})     = keyState == Down
