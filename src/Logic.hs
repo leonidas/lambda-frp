@@ -26,7 +26,7 @@ throttle minTicks = proc evs -> do
     returnA -< evs'
 
 collides :: Bullet -> Invader -> Bool
-collides (Bullet{..}) (Invader{..}) = dx < 29 && dy < 39
+collides (Bullet{..}) (Invader{..}) = dx < 19 && dy < 29
     where
         dx = abs $ vx bPos - vx iPos
         dy = abs $ vy bPos - vy iPos
@@ -36,7 +36,9 @@ bulletC (Bullet{..}) = proc invaders -> do
     y' <- integrate (vy bPos) -< -1
 
     let bullet = Bullet (Vec2 (vx bPos) y')
-        doesCollide = any (collides bullet) invaders
+        doesCollide = any (collides bullet) $ filter isNotDead invaders
+        isNotDead (Invader _ Death) = False
+        isNotDead _                 = True
         b
             | doesCollide || y' < 0 = Nothing
             | otherwise   = Just bullet
