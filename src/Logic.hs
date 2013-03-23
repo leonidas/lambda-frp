@@ -19,8 +19,6 @@ import Lambda.OpenGL (KeyEvent(..))
 import Lambda.Vector
 import ViewModel
 
-import Debug.Trace
-
 data Collision = Collision
 
 throttle :: Int -> Coroutine (Event a) (Event a)
@@ -36,7 +34,7 @@ collides (Bullet{..}) (Invader{..}) = dx < 19 && dy < 29
         dy = abs $ vy bPos - vy iPos
 
 bulletC :: Bullet -> Coroutine [Tagged Invader] (Maybe Bullet, TEvent Collision)
-bulletC (Bullet{..}) = trace "newBullet" $ proc invaders -> do
+bulletC (Bullet{..}) = proc invaders -> do
     y' <- integrate (vy bPos) -< -1
 
     let bullet = Bullet (Vec2 (vx bPos) y')
@@ -81,7 +79,12 @@ invaderC (Invader{..}) = proc ((), evs) -> do
     frameEv <- every 240 () -< ()
     frame   <- switchWith (const $ pure Death) frameCycle -< (frameEv, evs)
 
-    returnA -< Just $ Invader iPos frame
+    evs' <- delayE 100 -< evs
+
+    returnA -< case evs' of
+        [] -> Just $ Invader iPos frame
+        _  -> Nothing
+
     where
         frameCycle = stepE iFrame <<< mapC (cycleC frames)
         frames = case iFrame of
