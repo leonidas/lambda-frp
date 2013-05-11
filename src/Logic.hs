@@ -34,7 +34,9 @@ invader (Invader{..}) = proc _ -> do
 
     returnA -< Just $ Invader { iPos = pos, iFrame = frame }
     where
-        frames = cycleC [Walk1, Walk2]
+        frames = cycleC $ case iFrame of
+            Walk2 -> [Walk1, Walk2]
+            Walk1 -> [Walk2, Walk1]
 
 logic :: Coroutine [KeyEvent] ViewModel
 logic = proc _ -> do
@@ -50,4 +52,4 @@ logic = proc _ -> do
     where
         initialInvaders = map invader $ zipWith Invader invaderPos invaderFrame
         invaderPos   = Vec2 <$> [64,128..10*64] <*> [64,128..4*64]
-        invaderFrame = cycle [Walk1, Walk2, Death]
+        invaderFrame = cycle [Walk1, Walk2]
