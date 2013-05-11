@@ -13,6 +13,8 @@ import Control.Coroutine
 import Control.Coroutine.FRP
 import Control.Coroutine.FRP.Collections
 
+import Graphics.UI.GLUT
+
 import Lambda.OpenGL (KeyEvent(..))
 import Lambda.Vector
 import ViewModel
@@ -40,7 +42,16 @@ invader (Invader{..}) = proc _ -> do
 
 turret_ :: Turret -> Coroutine [KeyEvent] Turret
 turret_ (Turret{..}) = proc evs -> do
-    returnA -< Turret { tPos = tPos }
+    xdeltas <- mapE keyToDelta -< evs
+    xvel <- scanE (+) 0 -< xdeltas
+    xpos <- integrate 400 -< xvel
+    returnA -< Turret { tPos = Vec2 xpos 550 }
+    where
+        keyToDelta (KeyEvent (SpecialKey KeyLeft) Down _) = -1
+        keyToDelta (KeyEvent (SpecialKey KeyLeft) Up _) = 1
+        keyToDelta (KeyEvent (SpecialKey KeyRight) Down _) = 1
+        keyToDelta (KeyEvent (SpecialKey KeyRight) Up _) = -1
+
 
 logic :: Coroutine [KeyEvent] ViewModel
 logic = proc evs -> do
