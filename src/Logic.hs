@@ -26,8 +26,15 @@ collides (Bullet{..}) (Invader{..}) = dx < 29 && dy < 39
 invader :: Invader -> Coroutine () (Maybe Invader)
 invader (Invader{..}) = proc _ -> do
     let pos   = iPos
-        frame = iFrame
+
+    newFrame <- mapC frames <<< every 240 () -< ()
+
+    frame <- stepE iFrame -< newFrame
+
+
     returnA -< Just $ Invader { iPos = pos, iFrame = frame }
+    where
+        frames = cycleC [Walk1, Walk2]
 
 logic :: Coroutine [KeyEvent] ViewModel
 logic = proc _ -> do
