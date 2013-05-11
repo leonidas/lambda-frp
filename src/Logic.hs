@@ -13,6 +13,9 @@ import Control.Coroutine
 import Control.Coroutine.FRP
 import Control.Coroutine.FRP.Collections
 
+import Data.Set (Set)
+import qualified Data.Set as Set
+
 import Graphics.UI.GLUT
 
 import Lambda.OpenGL (KeyEvent(..))
@@ -40,10 +43,19 @@ invader (Invader{..}) = proc _ -> do
             Walk2 -> [Walk1, Walk2]
             Walk1 -> [Walk2, Walk1]
 
+keysDown :: Coroutine [KeyEvent] (Set Key)
+keysDown = updateE Set.empty <<< mapE insertKey where
+    insertKey (KeyEvent{..}) = case keyState of
+        Down -> Set.insert key
+        Up   -> Set.delete key
+
 turret_ :: Turret -> Coroutine [KeyEvent] Turret
 turret_ (Turret{..}) = proc evs -> do
-    xdeltas <- mapE keyToDelta -< evs
-    xvel <- scanE (+) 0 -< xdeltas
+    keys <- keysDown -< evs
+    let xvel
+            | (SpecialKey KeyLeft `Set.member` keys) = -1
+            | (SpecialKey KeyRight `Set.member` keys) = 1
+            | otherwise    = 0
     xpos <- integrate 400 -< xvel
     returnA -< Turret { tPos = Vec2 xpos 550 }
     where
