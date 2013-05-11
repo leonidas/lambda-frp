@@ -38,18 +38,24 @@ invader (Invader{..}) = proc _ -> do
             Walk2 -> [Walk1, Walk2]
             Walk1 -> [Walk2, Walk1]
 
+turret_ :: Turret -> Coroutine [KeyEvent] Turret
+turret_ (Turret{..}) = proc evs -> do
+    returnA -< Turret { tPos = tPos }
+
 logic :: Coroutine [KeyEvent] ViewModel
-logic = proc _ -> do
+logic = proc evs -> do
 
     invaders <- collection initialInvaders -< ((), [])
+    turret'  <- turret_ initialTurret -< evs
 
     returnA -< ViewModel
-        { turret   = Turret { tPos = Vec2 400 550 }
+        { turret   = turret'
         , bullets  = Bullet { bPos = Vec2 410 370 } : []
         , invaders = invaders
         }
 
     where
+        initialTurret   = Turret { tPos = Vec2 400 550 }
         initialInvaders = map invader $ zipWith Invader invaderPos invaderFrame
         invaderPos   = Vec2 <$> [64,128..10*64] <*> [64,128..4*64]
         invaderFrame = cycle [Walk1, Walk2]
